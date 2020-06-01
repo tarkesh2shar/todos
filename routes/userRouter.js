@@ -5,6 +5,7 @@ const encryptor = require("../helpers/hasher");
 const tokenizer = require("../helpers/token");
 const pool = require("../services/sqlPool");
 const jwt = require("jsonwebtoken");
+const authCheck = require("../middleware/authMiddleware");
 // create table users (id int AUTO_INCREMENT ,name varchar(20),password varchar(128),email varchar(128), PRIMARY KEY (id));
 // insert into users(name,password,email) values ("tarkesh2shar","passwordHere","tarkesh2shar@gmail.com");
 
@@ -18,7 +19,7 @@ router.post("/signup", (req, res) => {
     return res.status(Exceptions["EX3"].status).send(Exceptions["EX3"]);
   }
   if (!name) {
-    return res.status(Exceptions["EX3"].status).send(Exceptions["EX8"]);
+    return res.status(Exceptions["EX8"].status).send(Exceptions["EX8"]);
   }
   //check to see if a user with this particular email exists
   pool
@@ -76,6 +77,7 @@ router.post("/signin", async (req, res) => {
     }
 
     let userInDatabase = userArray[0];
+
     let isPasswordValid = await encryptor.comparePassword(
       password,
       userInDatabase.password
@@ -99,32 +101,27 @@ router.post("/signin", async (req, res) => {
   }
 });
 
-router.get("/currentUser", (req, res) => {
-  if (!req.headers.authorization) {
-    return res.status(Exceptions["EX9"].status).send({
-      error: true,
-      data: {
-        isAuth: false,
-      },
-    });
-  }
-  let token = req.headers.authorization.split(" ")[1];
-  let user = jwt.decode(token);
+router.get("/currentUser", authCheck, (req, res) => {
+  let user = req.currentUser;
 
   if (!user) {
     return res.status(Exceptions["EX9"].status).send({
       error: true,
       data: {
         isAuth: false,
+        user: null,
       },
     });
   }
+  console.log(user);
+
+  const { data } = user;
+
   res.send({
     error: false,
     data: {
       isAuth: true,
-      user,
-      token,
+      user: data,
     },
   });
 });
